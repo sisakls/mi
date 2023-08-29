@@ -1,6 +1,7 @@
 import numpy as np
 import gin
 import wandb
+from utils import gin_config_to_dict
 
 import data
 import method
@@ -19,10 +20,17 @@ class ExperimentManager:
             self.method_name, 
             self.seed)
 
-exp_manager = ExperimentManager("test", "test")
-exp_manager.method.eval(
-    exp_manager.data.var_X,
-    exp_manager.data.var_Y
-)
+    def estimate(self):
+        self.method.eval(
+            exp_manager.data.var_X,
+            exp_manager.data.var_Y)
+
+wandb.init(project="mi", entity="sisaklsanyo")
+wandb.config.update(gin_config_to_dict(gin.config_str()))
+
+exp_manager = ExperimentManager()
+exp_manager.estimate()
+
+wandb.finish()
 
 print(exp_manager.__dict__)

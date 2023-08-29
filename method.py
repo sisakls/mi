@@ -1,3 +1,5 @@
+import wandb
+
 class Method:
     def __init__(self, method_name, seed):
         self.method_name = method_name
@@ -11,6 +13,7 @@ class Method:
 
 def test(var_X, var_Y):
     if (var_X >= 0 and var_Y >= 0) or (var_X <= 0 and var_Y <= 0):
-        print("Yay!")
+        MI = 1
     else:
-        print("Nay.")
+        MI = 0
+    wandb.log({"MI": MI})

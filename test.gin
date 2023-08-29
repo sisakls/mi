@@ -1,0 +1,3 @@
+ExperimentManager.seed = 2023
+ExperimentManager.dataset_name = "test"
+ExperimentManager.method_name = "test"
