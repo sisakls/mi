@@ -1,3 +1,6 @@
 ExperimentManager.seed = 2023
-ExperimentManager.dataset_name = "test"
-ExperimentManager.method_name = "test"
+
+Data.dataset_name = "linear"
+Data.dim = 10
+
+Method.method_name = "test"

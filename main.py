@@ -1,29 +1,24 @@
 import numpy as np
 import gin
 import wandb
-from utils import gin_config_to_dict
 
 import data
 import method
+from utils import gin_config_to_dict
 
 @gin.configurable
 class ExperimentManager:
-    def __init__(self, dataset_name, method_name, seed=0):
+    def __init__(self, seed=0):
         self.seed = seed
-        self.dataset_name = dataset_name
-        self.method_name = method_name
-
-        self.data = data.Data(
-            self.dataset_name, 
-            self.seed)
-        self.method = method.Method(
-            self.method_name, 
-            self.seed)
+        self.data = data.Data(seed=self.seed)
+        self.method = method.Method(seed=self.seed)
 
     def estimate(self):
         self.method.eval(
-            exp_manager.data.var_X,
-            exp_manager.data.var_Y)
+            exp_manager.data.var_x,
+            exp_manager.data.var_y)
+
+gin.parse_config_file("test.gin")
 
 wandb.init(project="mi", entity="sisaklsanyo")
 wandb.config.update(gin_config_to_dict(gin.config_str()))
@@ -33,4 +28,4 @@ exp_manager.estimate()
 
 wandb.finish()
 
-print(exp_manager.__dict__)
+#print(exp_manager.__dict__)
