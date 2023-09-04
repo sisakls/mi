@@ -1,6 +1,6 @@
 ExperimentManager.seed = 2023
 
 Data.dataset_name = "linear"
-Data.dim = 10
+Data.num_samples = 10
 
-Method.method_name = "test"
+Method.method_name = "KL"
