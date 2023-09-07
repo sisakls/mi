@@ -39,5 +39,5 @@ class Method:
 
     def normalize_input(self, var_):
         var_ = var_ - np.mean(var_, axis=0)
-        var_ = var_ - np.linalg.norm(var_, axis=0)
+        var_ = var_ / np.linalg.norm(var_, axis=0)
         return var_
