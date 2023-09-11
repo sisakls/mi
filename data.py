@@ -1,4 +1,6 @@
-import numpy as np
+#import numpy as np
+import torch
+from torch import distributions
 import gin
 
 @gin.configurable
@@ -10,7 +12,7 @@ class Data:
         self.noise_dim = noise_dim
         self.seed = seed
 
-        self.rng = np.random.default_rng(self.seed)
+        torch.manual_seed(self.seed)
 
         if self.dataset_name == "linear":
             self.get_dset_linear()
@@ -24,8 +26,13 @@ class Data:
         self.add_noise()
 
     def get_dset_linear(self):
-        self.var_z = self.rng.uniform(-self.alpha/2, self.alpha/2, size=[self.num_samples, 1])
-        self.var_x = self.rng.uniform(0, 1, size=[self.num_samples, 1])
+        #self.var_z = self.rng.uniform(-self.alpha/2, self.alpha/2, size=[self.num_samples, 1])
+        self.distr_z = distributions.Uniform(-self.alpha/2, self.alpha/2)
+        self.var_z = self.distr_z.sample(sample_shape=[1, self.num_samples])
+        #self.var_x = self.rng.uniform(0, 1, size=[self.num_samples, 1])
+        self.distr_x = distributions.Uniform(0, 1)
+        self.var_x = self.distr_x.sample(sample_shape=[1, self.num_samples])
+        #self.var_y = self.var_x + self.var_z
         self.var_y = self.var_x + self.var_z
 
     def get_dset_helix(self):
@@ -36,8 +43,9 @@ class Data:
 
     def add_noise(self):
         #TODO: add noise to var_x, var_y (and an option to select noise distribution?)
+        self.distr_noisedim = distributions.Normal(0, 1)
 
-        self.var_x = np.concatenate(
-            [self.var_x, self.rng.normal(0, 1, size=[self.num_samples, self.noise_dim])], -1) #noise dimensions
-        self.var_y = np.concatenate(
-            [self.var_y, self.rng.normal(0, 1, size=[self.num_samples, self.noise_dim])], -1)
+        self.var_x = torch.cat(
+            [self.var_x, self.distr_noisedim.rsample(sample_shape=[self.noise_dim, self.num_samples])], axis=0)
+        self.var_y = torch.cat(
+            [self.var_y, self.distr_noisedim.rsample(sample_shape=[self.noise_dim, self.num_samples])], axis=0)

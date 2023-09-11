@@ -1,4 +1,4 @@
-import numpy as np
+import torch
 import gin
 import wandb
 
