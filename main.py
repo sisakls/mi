@@ -25,6 +25,8 @@ def main(argv):
 
     #set up wandb
     wandb.init(project="mi", entity="sisaklsanyo")
+    run_counter = wandb.run.name.split("-")[-1]
+    wandb.run.name = run_counter + "-" + FLAGS.gin_file[0].split('/')[-1][:-4]
     wandb.config.update(gin_config_to_dict(gin.config_str()))
 
     #run experiment
