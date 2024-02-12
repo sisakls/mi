@@ -35,8 +35,8 @@ def main(argv):
 
     wandb.finish()
 
+#set up gin
 if __name__ == '__main__':
-    #set up gin
     flags.DEFINE_multi_string('gin_file', None, "List of paths to the config files.")
     flags.DEFINE_multi_string('gin_param', None, "Newline separated list of Gin param bindings.")
     FLAGS = flags.FLAGS

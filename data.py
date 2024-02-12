@@ -1,4 +1,3 @@
-#import numpy as np
 import torch
 from torch import distributions
 import gin
@@ -26,13 +25,10 @@ class Data:
         self.add_noise()
 
     def get_dset_linear(self):
-        #self.var_z = self.rng.uniform(-self.alpha/2, self.alpha/2, size=[self.num_samples, 1])
         self.distr_z = distributions.Uniform(-self.alpha/2, self.alpha/2)
         self.var_z = self.distr_z.sample(sample_shape=[1, self.num_samples])
-        #self.var_x = self.rng.uniform(0, 1, size=[self.num_samples, 1])
         self.distr_x = distributions.Uniform(0, 1)
         self.var_x = self.distr_x.sample(sample_shape=[1, self.num_samples])
-        #self.var_y = self.var_x + self.var_z
         self.var_y = self.var_x + self.var_z
 
     def get_dset_helix(self):
