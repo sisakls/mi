@@ -1,0 +1,11 @@
+ExperimentManager.seed = 2023
+
+Data.dataset_name = "gaussian"
+Data.num_samples = 200
+Data.precov_mtx = [[1., 0.], [0.5, 1.]]
+Data.noise_dim = 0
+
+Method.method_name = "CLUBSample"
+Method.hidden_size = 15
+Method.learning_rate = 0.005
+Method.num_iters = 200
