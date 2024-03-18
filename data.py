@@ -53,7 +53,7 @@ class Data:
         self.var_x, self.var_y = self.var_xy[:self.dim, :], self.var_xy[self.dim:, :]
 
         mtx_x, mtx_y = cov_mtx[:self.dim, :self.dim], cov_mtx[self.dim:, self.dim:]
-        wandb.log({"True MI": 0.5 * (torch.log(torch.det(mtx_x) * torch.det(mtx_y)) - torch.log(cov_mtx))})
+        wandb.log({"True MI": 0.5 * (torch.log(torch.det(mtx_x) * torch.det(mtx_y)) - torch.log(torch.det(cov_mtx))).item()})
 
 
     def get_dset_helix(self):

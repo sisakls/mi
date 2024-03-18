@@ -3,7 +3,7 @@ import wandb
 
 import torch
 #from scipy.spatial import distance
-from scipy.special import loggamma
+from scipy.special import loggamma, psi
 from sympy import harmonic
 from mi_estimators import *
 
@@ -15,12 +15,14 @@ class Method:
 
         self.method_name = method_name
         self.seed = seed
-        if type(k) == list: self.k_list = k
-        elif type(k) == int: self.k_list = [k]
-        else: raise TypeError
-        if type(eps) == list: self.eps_list = eps
-        elif type(eps) == float: self.eps_list = [eps]
-        else: raise TypeError
+        #if type(k) == list: self.k_list = k
+        #elif type(k) == int: self.k_list = [k]
+        #else: raise TypeError
+        #if type(eps) == list: self.eps_list = eps
+        #elif type(eps) == float: self.eps_list = [eps]
+        #else: raise TypeError
+        self.k = k
+        self.eps = eps
         self.MI = MI
         self.hidden_size = hidden_size
         self.learning_rate = learning_rate
@@ -28,17 +30,19 @@ class Method:
         self.step = 0
 
         if self.method_name == "kNN": 
-            self.eval = self.kNN_eval
+            self.eval = self.kNN_estimator
+        elif self.method_name == "KSG":
+            self.eval = self.KSG_estimator
         elif self.method_name in ["NWJ", "MINE", "InfoNCE","L1OutUB","CLUB","CLUBSample"]:
             self.eval = self.neural_eval
         else: 
             raise NotImplementedError("No method named \"{}\" is implemented".format(self.method_name))
 
 
-    def kNN_eval(self, var_x, var_y):
-        for eps in self.eps_list:
-            for k in self.k_list:
-                self.kNN_estimator(var_x, var_y, k=k, eps=eps)
+    #def kNN_eval(self, var_x, var_y):
+    #    for eps in self.eps_list:
+    #        for k in self.k_list:
+    #            self.kNN_estimator(var_x, var_y, k=k, eps=eps)
 
 
     def neural_eval(self, var_x, var_y):
@@ -63,37 +67,70 @@ class Method:
             #torch.cuda.empty_cache()
 
 
-    def kNN_estimator(self, var_x, var_y, k=1, p_norm=2, eps=1e-10):
+    def kNN_estimator(self, var_x, var_y, p_norm=2):
         #var_x = self.normalize_input(var_x)
         #var_y = self.normalize_input(var_y)
         var_joint = torch.cat([var_x, var_y], axis=0)
-        H_x = self.kNN_entropy(var_x, k, p_norm=p_norm, eps=eps) 
-        H_y = self.kNN_entropy(var_y, k, p_norm=p_norm, eps=eps) 
-        H_xy = self.kNN_entropy(var_joint, k, p_norm=p_norm, eps=eps)
+        H_x = self.kNN_entropy(var_x, self.k, p_norm=p_norm, eps=self.eps) 
+        H_y = self.kNN_entropy(var_y, self.k, p_norm=p_norm, eps=self.eps) 
+        H_xy = self.kNN_entropy(var_joint, self.k, p_norm=p_norm, eps=self.eps)
 
-        if self.MI: wandb.log({"MI": H_x + H_y - H_xy}, step=self.step)
-        else: wandb.log({"H_x": H_x, "H_y": H_y, "H_xy": H_xy}, step=self.step)
+        if self.MI: wandb.log({"MI": (H_x + H_y - H_xy).item()})#, step=self.step)
+        else: wandb.log({"H_x": H_x.item(), "H_y": H_y.item(), "H_xy": H_xy.item()})#, step=self.step)
         #wandb.log({"epsilon": eps, "k": k}, step=self.step)
         self.step += 1
 
 
+    def KSG_estimator(self, var_x, var_y, p_norm=2):
+        var_joint = torch.cat([var_x, var_y], axis=0)
+        dist = self.kNN_radius(var_joint, self.k, p_norm=p_norm, eps=self.eps)
+        n_samples = var_x.shape[1]
+
+        dist_x = self.kNN_radius(var_x, None, p_norm=p_norm)
+        n_x = torch.zeros(n_samples) #counting points that fall in the given range in marginal X
+        for i in range(n_samples): 
+            j = self.k #at least k points fall in range
+            #print("===", dist[i], "===")
+            while dist_x[i,j] < dist[i]: 
+                j+=1
+                #print(j, dist_x[i,j])
+            n_x[i] = j
+            
+        dist_y = self.kNN_radius(var_y, None, p_norm=p_norm)
+        n_y = torch.zeros(n_samples) #same for marginal Y
+        for i in range(n_samples): 
+            j = self.k
+            #print("===", dist[i], "===")
+            while dist_y[i,j] < dist[i]: 
+                j+=1
+                #print(j, dist_x[i,j])
+            n_y[i] = j
+
+        MI = (n_x + n_y).mean() + torch.log(torch.tensor([n_samples])) + torch.log(torch.tensor([self.k]))
+
+        wandb.log({"MI": MI.item()})#, step=self.step)
+        self.step += 1
+
+
     def kNN_entropy(self, var_, k=1, p_norm=2, eps=1e-10):
-        dim, N = var_.shape
+        dim, n_samples = var_.shape
         radius = self.kNN_radius(var_, k, p_norm=p_norm, eps=eps)
         log_mean_volume = (
-            torch.log(torch.tensor([N]))
+            torch.log(torch.tensor([n_samples]))
             + (dim * torch.log(radius)).mean() 
             + (dim/2) * torch.log(torch.tensor(3.1416)) 
-            - float(harmonic(k-1))
-            - loggamma(dim/2 + 1) 
-            + 0.5772) #Euler-Mascheroni constant
+            - psi(k)
+            - loggamma(dim/2 + 1))
         return log_mean_volume
 
 
     def kNN_radius(self, var_, k=1, p_norm=2, eps=1e-10):
         dist = torch.cdist(var_.T, var_.T, p=p_norm)
         dist = dist.sort().values
-        return dist[:, k] + eps
+        if k is not None:
+            return dist[:, k] + eps
+        else:
+            return dist
 
 
     def normalize_input(self, var_): #Z-score normalization
