@@ -31,8 +31,10 @@ class Method:
 
         if self.method_name == "kNN": 
             self.eval = self.kNN_estimator
-        elif self.method_name == "KSG":
-            self.eval = self.KSG_estimator
+        elif self.method_name == "KSG1":
+            self.eval = self.KSG1_estimator
+        elif self.method_name == "KSG2":
+            self.eval = self.KSG2_estimator
         elif self.method_name in ["NWJ", "MINE", "InfoNCE","L1OutUB","CLUB","CLUBSample"]:
             self.eval = self.neural_eval
         else: 
@@ -81,35 +83,31 @@ class Method:
         self.step += 1
 
 
-    def KSG_estimator(self, var_x, var_y, p_norm=2):
+    def KSG1_estimator(self, var_x, var_y, p_norm=2):
         var_joint = torch.cat([var_x, var_y], axis=0)
-        dist = self.kNN_radius(var_joint, self.k, p_norm=p_norm, eps=self.eps)
         n_samples = var_x.shape[1]
-
         dist_x = self.kNN_radius(var_x, None, p_norm=p_norm)
-        n_x = torch.zeros(n_samples) #counting points that fall in the given range in marginal X
-        for i in range(n_samples): 
-            j = self.k #at least k points fall in range
-            #print("===", dist[i], "===")
-            while dist_x[i,j] < dist[i]: 
-                j+=1
-                #print(j, dist_x[i,j])
-            n_x[i] = j
-            
         dist_y = self.kNN_radius(var_y, None, p_norm=p_norm)
-        n_y = torch.zeros(n_samples) #same for marginal Y
-        for i in range(n_samples): 
-            j = self.k
-            #print("===", dist[i], "===")
-            while dist_y[i,j] < dist[i]: 
-                j+=1
-                #print(j, dist_x[i,j])
-            n_y[i] = j
+        dist_joint = torch.maximum(dist_x, dist_y).sort().values[:, self.k] + self.eps
 
-        MI = (n_x + n_y).mean() + torch.log(torch.tensor([n_samples])) + torch.log(torch.tensor([self.k]))
+        n_x = self.KSG_count(var_x, dist_joint, p_norm=p_norm)
+        n_y = self.KSG_count(var_y, dist_joint, p_norm=p_norm)
+
+        MI = (
+            (torch.log(n_x) + torch.log(n_y)).mean() 
+            + torch.log(torch.tensor([n_samples])) 
+            + torch.log(torch.tensor([self.k])))
 
         wandb.log({"MI": MI.item()})#, step=self.step)
         self.step += 1
+
+
+    def KSG2_estimator(self, var_x, var_y, p_norm=2):
+        var_joint = torch.cat([var_x, var_y], axis=0)
+        #dist = TODO
+        n_samples = var_x.shape[1]
+
+        raise NotImplementedError("KSG2 not yet implemented")
 
 
     def kNN_entropy(self, var_, k=1, p_norm=2, eps=1e-10):
@@ -131,6 +129,17 @@ class Method:
             return dist[:, k] + eps
         else:
             return dist
+
+    
+    def KSG_count(self, var_, radii, p_norm=2):
+        n_samples = var_.shape[1]
+        dist_ = self.kNN_radius(var_, None, p_norm=p_norm)
+        count = torch.zeros(n_samples) #counting points that fall in the given radius
+        for i in range(n_samples): 
+            j = self.k #at least k points fall in the radius
+            while dist_[i,j] < radii[i]: j+=1
+            count[i] = j
+        return count
 
 
     def normalize_input(self, var_): #Z-score normalization
