@@ -86,8 +86,8 @@ class Method:
     def KSG1_estimator(self, var_x, var_y, p_norm=2):
         var_joint = torch.cat([var_x, var_y], axis=0)
         n_samples = var_x.shape[1]
-        dist_x = self.kNN_radius(var_x, None, p_norm=p_norm)
-        dist_y = self.kNN_radius(var_y, None, p_norm=p_norm)
+        dist_x = self.kNN_radius(var_x, None, p_norm=p_norm, sorting=False)
+        dist_y = self.kNN_radius(var_y, None, p_norm=p_norm, sorting=False)
         dist_joint = torch.maximum(dist_x, dist_y).sort().values[:, self.k] + self.eps
 
         n_x = self.KSG_count(var_x, dist_joint, p_norm=p_norm)
@@ -122,9 +122,10 @@ class Method:
         return log_mean_volume
 
 
-    def kNN_radius(self, var_, k=1, p_norm=2, eps=1e-10):
+    def kNN_radius(self, var_, k=1, p_norm=2, eps=1e-10, sorting=True):
         dist = torch.cdist(var_.T, var_.T, p=p_norm)
-        dist = dist.sort().values
+        if sorting:
+            dist = dist.sort().values
         if k is not None:
             return dist[:, k] + eps
         else:
