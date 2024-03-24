@@ -15,12 +15,6 @@ class Method:
 
         self.method_name = method_name
         self.seed = seed
-        #if type(k) == list: self.k_list = k
-        #elif type(k) == int: self.k_list = [k]
-        #else: raise TypeError
-        #if type(eps) == list: self.eps_list = eps
-        #elif type(eps) == float: self.eps_list = [eps]
-        #else: raise TypeError
         self.k = k
         self.eps = eps
         self.MI = MI
@@ -95,11 +89,28 @@ class Method:
 
 
     def KSG2_estimator(self, var_x, var_y, p_norm=2):
-        var_joint = torch.cat([var_x, var_y], axis=1)
-        #dist = TODO
         n_samples = var_x.shape[0]
+        var_joint = torch.cat([var_x, var_y], axis=1)
+        dist_x = self.KSG_radius(var_x, k=None, p_norm=p_norm)
+        dist_y = self.KSG_radius(var_y, k=None, p_norm=p_norm)
+        dist_joint = torch.maximum(dist_x, dist_y)
+        knn = dist_joint.topk(k=self.k+1, dim=1, largest=False)
 
-        raise NotImplementedError("KSG2 not yet implemented")
+        radii_x = var_x[knn.indices] - var_x[:,None,:].expand(var_x[knn.indices].shape)
+        radii_x = radii_x.norm(p=p_norm, dim=2).max(dim=1).values + self.eps
+        radii_y = var_y[knn.indices] - var_y[:,None,:].expand(var_y[knn.indices].shape)
+        radii_y = radii_y.norm(p=p_norm, dim=2).max(dim=1).values + self.eps
+
+        n_x = self.KSG_count(var_x, radii_x, p_norm=p_norm)
+        n_y = self.KSG_count(var_y, radii_y, p_norm=p_norm)
+
+        MI = (
+            - (torch.log(n_x) + torch.log(n_y)).mean() 
+            + torch.log(torch.tensor([n_samples])) 
+            + torch.log(torch.tensor([self.k])))
+
+        wandb.log({"MI": MI.item()})#, step=self.step)
+        self.step += 1
 
 
     def kNN_entropy(self, var_, k=1, p_norm=2, eps=1e-10):
@@ -120,6 +131,17 @@ class Method:
             dist = dist.sort().values
         if k is not None:
             return dist[:, k] + eps
+        else:
+            return dist
+
+
+    def KSG_radius(self, var_, k=1, p_norm=2):
+        n_samples = var_.shape[0]
+        varvar = var_[:, :, None].repeat(1, 1, n_samples)
+        dist = varvar - varvar.transpose(0,2)
+        dist = dist.norm(p=p_norm, dim=1)
+        if k is not None:
+            return dist.topk(k+1, dim=0, largest=False)
         else:
             return dist
 
