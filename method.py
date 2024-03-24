@@ -41,14 +41,8 @@ class Method:
             raise NotImplementedError("No method named \"{}\" is implemented".format(self.method_name))
 
 
-    #def kNN_eval(self, var_x, var_y):
-    #    for eps in self.eps_list:
-    #        for k in self.k_list:
-    #            self.kNN_estimator(var_x, var_y, k=k, eps=eps)
-
-
     def neural_eval(self, var_x, var_y):
-        dim, N = var_x.shape
+        dim = var_x.shape[1]
         model = eval(self.method_name)(dim, dim, self.hidden_size)
         optimizer = torch.optim.Adam(model.parameters(), self.learning_rate)
         mi_est_values = []
@@ -56,12 +50,12 @@ class Method:
         for global_iter in range(self.num_iters):
             #batch_x, batch_y = correlated_linear(alpha=0.01, dim=sample_dim, batch_size=batch_size)
             model.eval()
-            mi_est_values.append(model(var_x.T, var_y.T).item())
+            mi_est_values.append(model(var_x, var_y).item())
             wandb.log({"MI": mi_est_values[-1]}, step=self.step)
             self.step += 1
             
             model.train() 
-            model_loss = model.learning_loss(var_x.T, var_y.T)
+            model_loss = model.learning_loss(var_x, var_y)
             optimizer.zero_grad()
             model_loss.backward()
             optimizer.step()
@@ -70,9 +64,7 @@ class Method:
 
 
     def kNN_estimator(self, var_x, var_y, p_norm=2):
-        #var_x = self.normalize_input(var_x)
-        #var_y = self.normalize_input(var_y)
-        var_joint = torch.cat([var_x, var_y], axis=0)
+        var_joint = torch.cat([var_x, var_y], axis=1)
         H_x = self.kNN_entropy(var_x, self.k, p_norm=p_norm, eps=self.eps) 
         H_y = self.kNN_entropy(var_y, self.k, p_norm=p_norm, eps=self.eps) 
         H_xy = self.kNN_entropy(var_joint, self.k, p_norm=p_norm, eps=self.eps)
@@ -84,8 +76,8 @@ class Method:
 
 
     def KSG1_estimator(self, var_x, var_y, p_norm=2):
-        var_joint = torch.cat([var_x, var_y], axis=0)
-        n_samples = var_x.shape[1]
+        n_samples = var_x.shape[0]
+        var_joint = torch.cat([var_x, var_y], axis=1)
         dist_x = self.kNN_radius(var_x, None, p_norm=p_norm, sorting=False)
         dist_y = self.kNN_radius(var_y, None, p_norm=p_norm, sorting=False)
         dist_joint = torch.maximum(dist_x, dist_y).sort().values[:, self.k] + self.eps
@@ -94,7 +86,7 @@ class Method:
         n_y = self.KSG_count(var_y, dist_joint, p_norm=p_norm)
 
         MI = (
-            (torch.log(n_x) + torch.log(n_y)).mean() 
+            - (torch.log(n_x) + torch.log(n_y)).mean() 
             + torch.log(torch.tensor([n_samples])) 
             + torch.log(torch.tensor([self.k])))
 
@@ -103,17 +95,17 @@ class Method:
 
 
     def KSG2_estimator(self, var_x, var_y, p_norm=2):
-        var_joint = torch.cat([var_x, var_y], axis=0)
+        var_joint = torch.cat([var_x, var_y], axis=1)
         #dist = TODO
-        n_samples = var_x.shape[1]
+        n_samples = var_x.shape[0]
 
         raise NotImplementedError("KSG2 not yet implemented")
 
 
     def kNN_entropy(self, var_, k=1, p_norm=2, eps=1e-10):
-        dim, n_samples = var_.shape
+        n_samples, dim = var_.shape
         radius = self.kNN_radius(var_, k, p_norm=p_norm, eps=eps)
-        log_mean_volume = (
+        log_mean_volume = ( #TODO: implement for any p_norm, not just p_norm=2
             torch.log(torch.tensor([n_samples]))
             + (dim * torch.log(radius)).mean() 
             + (dim/2) * torch.log(torch.tensor(3.1416)) 
@@ -123,7 +115,7 @@ class Method:
 
 
     def kNN_radius(self, var_, k=1, p_norm=2, eps=1e-10, sorting=True):
-        dist = torch.cdist(var_.T, var_.T, p=p_norm)
+        dist = torch.cdist(var_, var_, p=p_norm)
         if sorting:
             dist = dist.sort().values
         if k is not None:
@@ -133,7 +125,7 @@ class Method:
 
     
     def KSG_count(self, var_, radii, p_norm=2):
-        n_samples = var_.shape[1]
+        n_samples = var_.shape[0]
         dist_ = self.kNN_radius(var_, None, p_norm=p_norm)
         count = torch.zeros(n_samples) #counting points that fall in the given radius
         for i in range(n_samples): 
@@ -144,6 +136,6 @@ class Method:
 
 
     def normalize_input(self, var_): #Z-score normalization
-        var_ -= var_.mean(axis=1, keepdim=True)
-        var_ /= torch.std(var_, axis=1, keepdim=True)
+        var_ -= var_.mean(axis=0, keepdim=True)
+        var_ /= torch.std(var_, axis=0, keepdim=True)
         return var_

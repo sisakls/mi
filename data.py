@@ -38,9 +38,9 @@ class Data:
 
     def get_dset_linear(self):
         self.distr_z = distributions.Uniform(-self.alpha/2, self.alpha/2)
-        self.var_z = self.distr_z.sample(sample_shape=[self.dim, self.num_samples])
+        self.var_z = self.distr_z.sample(sample_shape=[self.num_samples, self.dim])
         self.distr_x = distributions.Uniform(0, 1)
-        self.var_x = self.distr_x.sample(sample_shape=[self.dim, self.num_samples])
+        self.var_x = self.distr_x.sample(sample_shape=[self.num_samples, self.dim])
         self.var_y = self.var_x + self.var_z
 
         wandb.log({"True MI": self.alpha/2 - log(self.alpha)})
@@ -49,8 +49,8 @@ class Data:
     def get_dset_gaussian(self):
         cov_mtx = self.precov_mtx @ self.precov_mtx.T
         self.distr_xy = distributions.MultivariateNormal(torch.zeros(2*self.dim), cov_mtx)
-        self.var_xy = self.distr_xy.sample(sample_shape=[self.num_samples]).T
-        self.var_x, self.var_y = self.var_xy[:self.dim, :], self.var_xy[self.dim:, :]
+        self.var_xy = self.distr_xy.sample(sample_shape=[self.num_samples])
+        self.var_x, self.var_y = self.var_xy[:, :self.dim], self.var_xy[:, self.dim:]
 
         mtx_x, mtx_y = cov_mtx[:self.dim, :self.dim], cov_mtx[self.dim:, self.dim:]
         wandb.log({"True MI": 0.5 * (torch.log(torch.det(mtx_x) * torch.det(mtx_y)) - torch.log(torch.det(cov_mtx))).item()})
@@ -67,6 +67,6 @@ class Data:
         self.distr_noisedim = distributions.Normal(0, 1)
 
         self.var_x = torch.cat(
-            [self.var_x, self.distr_noisedim.rsample(sample_shape=[self.noise_dim, self.num_samples])], axis=0)
+            [self.var_x, self.distr_noisedim.rsample(sample_shape=[self.num_samples, self.noise_dim])], axis=1)
         self.var_y = torch.cat(
-            [self.var_y, self.distr_noisedim.rsample(sample_shape=[self.noise_dim, self.num_samples])], axis=0)
+            [self.var_y, self.distr_noisedim.rsample(sample_shape=[self.num_samples, self.noise_dim])], axis=1)

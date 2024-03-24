@@ -5,7 +5,7 @@ Data.num_samples = 200
 Data.alpha = 0.01
 Data.noise_dim = 0
 
-Method.method_name = "CLUBSample"
+Method.method_name = "InfoNCE"
 Method.hidden_size = 15
 Method.learning_rate = 0.005
 Method.num_iters = 200
