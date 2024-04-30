@@ -6,7 +6,6 @@ Data.dim = 20
 Data.precov_mtx = None
 Data.noise_dim = 0
 
-Method.method_name = "MINE"
-Method.hidden_size = 40
-Method.learning_rate = 0.005
-Method.num_iters = 200
+Method.method_name = "KSG2"
+Method.k = 4
+Method.eps = 1e-10

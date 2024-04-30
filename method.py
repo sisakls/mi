@@ -45,7 +45,7 @@ class Method:
             #batch_x, batch_y = correlated_linear(alpha=0.01, dim=sample_dim, batch_size=batch_size)
             model.eval()
             mi_est_values.append(model(var_x, var_y).item())
-            wandb.log({"MI": mi_est_values[-1]}, step=self.step)
+            wandb.log({"train MI": mi_est_values[-1]}, step=self.step)
             self.step += 1
             
             model.train() 
@@ -55,7 +55,7 @@ class Method:
             optimizer.step()
             #del batch_x, batch_y
             #torch.cuda.empty_cache()
-
+        wandb.log({"MI": max(mi_est_values)})#, step=self.step)
 
     def kNN_estimator(self, var_x, var_y, p_norm=2):
         var_joint = torch.cat([var_x, var_y], axis=1)

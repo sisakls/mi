@@ -16,10 +16,8 @@ class Data:
         self.seed = seed
         self.noise_dim = noise_dim
         self.alpha = alpha
-        self.precov_mtx = torch.tensor(precov_mtx) #must be lower triangular, diagonal entries all positive
-
-        assert self.precov_mtx.shape == torch.Size([2*self.dim, 2*self.dim])
-
+        self.precov_mtx = precov_mtx #must be lower triangular, diagonal entries all positive (or None)
+        
         torch.manual_seed(self.seed)
 
         if self.dataset_name == "linear":
@@ -47,6 +45,14 @@ class Data:
 
 
     def get_dset_gaussian(self):
+        if self.precov_mtx == None:
+            self.precov_mtx = torch.tril(2*torch.rand([2*self.dim, 2*self.dim]) - 1)
+            for i in range(2*self.dim):
+                self.precov_mtx[i,i] = 1
+        else:
+            self.precov_mtx = torch.tensor(self.precov_mtx)
+        assert self.precov_mtx.shape == torch.Size([2*self.dim, 2*self.dim])
+
         cov_mtx = self.precov_mtx @ self.precov_mtx.T
         self.distr_xy = distributions.MultivariateNormal(torch.zeros(2*self.dim), cov_mtx)
         self.var_xy = self.distr_xy.sample(sample_shape=[self.num_samples])
