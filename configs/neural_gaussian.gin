@@ -2,7 +2,7 @@ ExperimentManager.seed = 2023
 
 Data.dataset_name = "gaussian"
 Data.num_samples = 10000
-Data.dim = 20
+Data.dim = 10
 Data.precov_mtx = None
 Data.noise_dim = 0
 

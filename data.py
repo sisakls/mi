@@ -41,7 +41,7 @@ class Data:
         self.var_x = self.distr_x.sample(sample_shape=[self.num_samples, self.dim])
         self.var_y = self.var_x + self.var_z
 
-        wandb.log({"True MI": self.alpha/2 - log(self.alpha)})
+        wandb.log({"True MI": self.dim * (self.alpha/2 - log(self.alpha))})
 
 
     def get_dset_gaussian(self):

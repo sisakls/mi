@@ -15,9 +15,10 @@ class ExperimentManager:
         self.method = method.Method(seed=self.seed)
 
     def estimate(self):
-        self.method.eval(
-            self.data.var_x,
-            self.data.var_y)
+        for sample_size in [100, 300, 1000, 3000, 10000]:
+            self.method.eval(
+                self.data.var_x[:sample_size, :],
+                self.data.var_y[:sample_size, :])
 
 def main(argv):
     #parse gin file
