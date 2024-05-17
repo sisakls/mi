@@ -9,16 +9,19 @@ from utils import gin_config_to_dict
 
 @gin.configurable
 class ExperimentManager:
-    def __init__(self, seed=0):
+    def __init__(self, sample_size_list, dim_list, seed=0):
         self.seed = seed
+        self.sample_size_list = sample_size_list
+        self.dim_list = dim_list
         self.data = data.Data(seed=self.seed)
         self.method = method.Method(seed=self.seed)
 
     def estimate(self):
-        for sample_size in [100, 300, 1000, 3000, 10000]:
-            self.method.eval(
-                self.data.var_x[:sample_size, :],
-                self.data.var_y[:sample_size, :])
+        for sample_size in self.sample_size_list:
+            for dimension in self.dim_list:
+                self.method.eval(
+                    self.data.var_x[:sample_size, :dimension],
+                    self.data.var_y[:sample_size, :dimension])
 
 def main(argv):
     #parse gin file

@@ -8,7 +8,7 @@ Data.dim = 10
 Data.alpha = 0.6
 Data.noise_dim = 0
 
-Method.method_name = "kNN"
+Method.method_name = "KSG1"
 Method.k = 1
 Method.eps = 1e-10
 Method.p_norm = 2

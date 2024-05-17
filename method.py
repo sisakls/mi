@@ -20,7 +20,7 @@ class Method:
 
         self.k = k
         self.eps = eps
-        self.p_norm = p_norm
+        self.p_norm = float(p_norm)
 
         self.hidden_size = hidden_size
         self.learning_rate = learning_rate
@@ -28,12 +28,10 @@ class Method:
         self.step = 0
         self.trainstep = 0
 
-        if self.method_name == "kNN": 
-            self.eval = self.kNN_estimator
-        elif self.method_name == "KSG1":
-            self.eval = self.KSG1_estimator
-        elif self.method_name == "KSG2":
-            self.eval = self.KSG2_estimator
+        nearest_neighbor_estimators = {
+            "kNN": self.kNN_estimator, "KSG1": self.KSG1_estimator, "KSG2": self.KSG2_estimator}
+        if self.method_name in nearest_neighbor_estimators.keys(): 
+            self.eval = nearest_neighbor_estimators[self.method_name]
         elif self.method_name in ["NWJ", "MINE", "InfoNCE","L1OutUB","CLUB","CLUBSample"]:
             self.eval = self.neural_eval
         else: 
@@ -121,12 +119,12 @@ class Method:
     def kNN_entropy(self, var_, k=1, p_norm=2, eps=1e-10):
         n_samples, dim = var_.shape
         radius = self.kNN_radius(var_, k, p_norm=p_norm, eps=eps)
-        if type(p_norm) == int: #Unit ball hypervolume, L_p norm
+        if p_norm < float('inf'): #Unit ball hypervolume, L_p norm
             unit_V = (
                 dim * (loggamma(1 + 1/p_norm) + torch.log(torch.tensor([2])))
                 - loggamma(dim/p_norm + 1))
-        #elif p_norm is None: #Unit ball hypervolume, L_infty norm
-        #    unit_V = dim * torch.log(torch.tensor([2]))
+        elif p_norm == float('inf'): #Unit ball hypervolume, L_infty norm
+            unit_V = dim * torch.log(torch.tensor([2]))
         log_mean_volume = (
             torch.log(torch.tensor([n_samples])) #log(n)/psi(n)
             - psi(k) #-log(k)/-psi(k)
@@ -136,7 +134,7 @@ class Method:
 
 
     def kNN_radius(self, var_, k=1, p_norm=2, eps=1e-10, sorting=True):
-        dist = torch.cdist(var_, var_, p=p_norm) #TODO: L_infty norm
+        dist = torch.cdist(var_, var_, p=p_norm)
         if sorting:
             dist = dist.sort().values
         if k is not None:
@@ -149,7 +147,7 @@ class Method:
         n_samples = var_.shape[0]
         varvar = var_[:, :, None].repeat(1, 1, n_samples)
         dist = varvar - varvar.transpose(0,2)
-        dist = dist.norm(p=p_norm, dim=1) #TODO: L_infty norm
+        dist = dist.norm(p=p_norm, dim=1)
         if k is not None:
             return dist.topk(k+1, dim=0, largest=False)
         else:
@@ -158,7 +156,7 @@ class Method:
     
     def KSG_count(self, var_, radii, p_norm=2):
         n_samples = var_.shape[0]
-        dist_ = self.kNN_radius(var_, None, p_norm=p_norm) #TODO: L_infty norm
+        dist_ = self.kNN_radius(var_, None, p_norm=p_norm)
         count = torch.zeros(n_samples) #counting points that fall in the given radius
         for i in range(n_samples): 
             j = self.k #at least k points fall in the radius

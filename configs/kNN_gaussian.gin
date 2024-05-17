@@ -1,4 +1,6 @@
 ExperimentManager.seed = 2023
+ExperimentManager.sample_size_list = [100, 300, 1000, 3000, 10000]
+ExperimentManager.dim_list = [10]
 
 Data.dataset_name = "gaussian"
 Data.num_samples = 10000
@@ -9,4 +11,4 @@ Data.noise_dim = 0
 Method.method_name = "kNN"
 Method.k = 1
 Method.eps = 1e-10
-Method.p_norm = 10
+Method.p_norm = 2
