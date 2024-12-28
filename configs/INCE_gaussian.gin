@@ -2,13 +2,13 @@ ExperimentManager.seed = 2023
 ExperimentManager.sample_size_list = [10000]
 ExperimentManager.dim_list = [2, 3, 4, 5, 6, 7, 8, 9, 10]
 
-Data.dataset_name = "linear"
+Data.dataset_name = "gaussian"
 Data.num_samples = 10000
 Data.dim = 2
-Data.alpha = 0.3
+Data.beta = 4.
 Data.noise_dim = 8
 
-Method.method_name = "KSG1"
-Method.k = 1
-Method.eps = 1e-10
-Method.p_norm = 2
+Method.method_name = "InfoNCE"
+Method.hidden_size = 30
+Method.learning_rate = 0.020
+Method.num_iters = 100

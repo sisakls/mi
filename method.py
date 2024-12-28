@@ -40,25 +40,35 @@ class Method:
 
     def neural_eval(self, var_x, var_y):
         dim = var_x.shape[1]
-        model = eval(self.method_name)(dim, dim, self.hidden_size)
+        model = eval(self.method_name)(dim, dim, self.hidden_size).cuda()
         optimizer = torch.optim.Adam(model.parameters(), self.learning_rate)
         mi_est_values = []
+        x_loader = torch.utils.data.DataLoader(var_x, batch_size=3334, shuffle=False)
+        y_loader = torch.utils.data.DataLoader(var_y, batch_size=3334, shuffle=False)
+        #var_x = var_x.to(device="cuda")
+        #var_y = var_y.to(device="cuda")
 
         for global_iter in range(self.num_iters):
-            #batch_x, batch_y = correlated_linear(alpha=0.01, dim=sample_dim, batch_size=batch_size)
-            model.eval()
-            mi_est_values.append(model(var_x, var_y).item())
-            wandb.log({"train MI": mi_est_values[-1]}, step=self.trainstep)
-            self.trainstep += 1
+            y_batches = iter(y_loader)
+            for batch_x in x_loader:
+                model.eval()
+                batch_x = batch_x.to(device="cuda")
+                batch_y = next(y_batches).to(device="cuda")
+                mi_est_values.append(model(batch_x, batch_y).item())
+                wandb.log({"train MI": mi_est_values[-1]}, step=self.trainstep)
+                self.trainstep += 1
             
-            model.train() 
-            model_loss = model.learning_loss(var_x, var_y)
-            optimizer.zero_grad()
-            model_loss.backward()
-            optimizer.step()
-            #del batch_x, batch_y
-            #torch.cuda.empty_cache()
-        wandb.log({"MI": mi_est_values[-1]})#, step=self.step)
+                model.train() 
+                model_loss = model.learning_loss(batch_x, batch_y)
+                optimizer.zero_grad()
+                model_loss.backward()
+                optimizer.step()
+
+                del batch_x, batch_y
+                torch.cuda.empty_cache()
+        wandb.log({"MI": sum(mi_est_values[-20:])/20})#, step=self.step)
+        #del model, x_loader, y_loader
+        #torch.cuda.empty_cache()
 
     def kNN_estimator(self, var_x, var_y):
         var_joint = torch.cat([var_x, var_y], axis=1)
@@ -85,7 +95,7 @@ class Method:
         MI = (
             - (torch.log(n_x) + torch.log(n_y)).mean() 
             + torch.log(torch.tensor([n_samples])) 
-            + torch.log(torch.tensor([self.k])))
+            + psi(torch.tensor([self.k])))
 
         wandb.log({"MI": MI.item()})#, step=self.step)
         self.step += 1
@@ -110,7 +120,8 @@ class Method:
         MI = (
             - (torch.log(n_x) + torch.log(n_y)).mean() 
             + torch.log(torch.tensor([n_samples])) 
-            + torch.log(torch.tensor([self.k])))
+            + psi(torch.tensor([self.k]))
+            - 1/self.k)
 
         wandb.log({"MI": MI.item()})#, step=self.step)
         self.step += 1

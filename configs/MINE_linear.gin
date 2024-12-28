@@ -8,7 +8,7 @@ Data.dim = 2
 Data.alpha = 0.3
 Data.noise_dim = 8
 
-Method.method_name = "KSG1"
-Method.k = 1
-Method.eps = 1e-10
-Method.p_norm = 2
+Method.method_name = "MINE"
+Method.hidden_size = 30
+Method.learning_rate = 0.004
+Method.num_iters = 800

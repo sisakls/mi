@@ -9,13 +9,14 @@ from numpy import log
 class Data:
     def __init__(
         self, dataset_name, num_samples, dim=1, seed=0, 
-        noise_dim=0, alpha=1., precov_mtx=[[1., 0.], [0.5, 1.]]):
+        noise_dim=0, alpha=0.6, beta = 2., precov_mtx=[[1., 0.], [0.5, 1.]]):
         self.dataset_name = dataset_name
         self.num_samples = num_samples
         self.dim = dim
         self.seed = seed
         self.noise_dim = noise_dim
         self.alpha = alpha
+        self.beta = beta
         self.precov_mtx = precov_mtx #must be lower triangular, diagonal entries all positive (or None)
         
         torch.manual_seed(self.seed)
@@ -45,7 +46,11 @@ class Data:
 
 
     def get_dset_gaussian(self):
-        if self.precov_mtx == None:
+        if self.beta != None:
+            self.precov_mtx = torch.eye(2*self.dim)
+            for i in range(self.dim):
+                self.precov_mtx[self.dim + i, i] = self.beta
+        elif self.precov_mtx == None:
             self.precov_mtx = torch.tril(2*torch.rand([2*self.dim, 2*self.dim]) - 1)
             for i in range(2*self.dim):
                 self.precov_mtx[i,i] = 1
@@ -69,7 +74,7 @@ class Data:
         raise NotImplementedError
 
     def add_noise(self):
-        #TODO: add noise to var_x, var_y (and an option to select noise distribution?)
+        #TODO?: option to select noise distribution
         self.distr_noisedim = distributions.Normal(0, 1)
 
         self.var_x = torch.cat(
